@@ -1,7 +1,7 @@
 # Zoom and Center publisher
  
 ## Introduction
-This application show you how to integrate Vonage Video API with face-api and insertable stream.
+This application show you how to integrate Vonage Video API with @vonage/ml-transformers and @vonage/media-processor packages.
 The app will adjust the publisher stream automatically based on publisher's face:  
   1. Zoom publisher.  
   2. Center publisher.  
