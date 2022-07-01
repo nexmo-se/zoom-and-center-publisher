@@ -248,12 +248,14 @@ async function initializeStream() {
 
 
 function transform(readable, writable){ 
-    worker.postMessage({
-      operation: 'transform',
-      readable: readable,
-      writable: writable,
-    }, [readable, writable]);
-    return new Promise((resolve, reject) => {resolve()})
+    return new Promise((resolve, reject) => {
+      worker.postMessage({
+        operation: 'transform',
+        readable: readable,
+        writable: writable,
+      }, [readable, writable]);
+      resolve()
+    })
 }
 
 /*****************
