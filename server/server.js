@@ -10,7 +10,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const app = express(); // create express app
 require('dotenv').config();
-app.use(express.static(path.join(__dirname, '../dist')));
+app.use(express.static(path.join(__dirname, '../dist'))); // TODO
 app.use(cors());
 
 const OpenTok = require("opentok");
@@ -20,7 +20,7 @@ app.use(bodyParser.json());
 const sessions = {};
 
 app.get('/', (req, res, next) => {
-    res.sendFile(path.join(__dirname+'/index.html'));
+    res.sendFile(path.join(__dirname+'/index.html'));  // TODO
   });
 
 app.get('/session/:room', async (req, res) => {

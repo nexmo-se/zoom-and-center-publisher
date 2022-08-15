@@ -45,6 +45,7 @@ button.enable{
 #widthPadding.is-shown,
 #heightPadding.is-shown,
 #fixedRatio.is-shown,
+#faceTracking.is-shown,
 #autoBrightness.is-shown {
   display: block;
 }
@@ -52,6 +53,7 @@ button.enable{
 #widthPadding,
 #heightPadding,
 #fixedRatio,
+#faceTracking,
 #autoBrightness {
   display: none;
 }
@@ -60,6 +62,7 @@ label {
   display: block;
 }
 #fixedRatio label,
+#faceTracking label,
 #autoBrightness label {
   display: inline-block;
 }

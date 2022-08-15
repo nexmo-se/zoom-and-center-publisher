@@ -55,12 +55,8 @@ let sessionId;
 let token;
 let session;
 
-// brightness variables
-let initialBrightnessInput;
-let initialBrightnessLevel;
-
 // face detection variables
-let videoDimension
+let videoInfo;
 let padding = {
   width: 60,
   height: 80
@@ -82,11 +78,16 @@ const heightPaddingLabel = heightPaddingSection.getElementsByTagName('label')[0]
 const heightPaddingInput = heightPaddingSection.getElementsByTagName('input')[0];
 const fixedRatioSection = document.getElementById('fixedRatio');
 const fixedRatioCheckbox = fixedRatioSection.getElementsByTagName('input')[0];
+const faceTrackingSection = document.getElementById('faceTracking');
+const faceTrackingCheckbox = faceTrackingSection.getElementsByTagName('input')[0];
 const autoBrightnessSection = document.getElementById('autoBrightness');
 const autoBrightnessCheckbox = autoBrightnessSection.getElementsByTagName('input')[0];
 const settingButton = document.getElementById('popOverTitle');
 const popOverContent = document.getElementById('popOverContent');
 const loader = document.getElementById('loader');
+
+const DEFAULT_BRIGHNESS_LEVEL = 1;
+brightnessLevelInput.value = DEFAULT_BRIGHNESS_LEVEL;
 
 /*********************
  * MediaStream Support
@@ -99,31 +100,49 @@ if (typeof MediaStreamTrackProcessor === 'undefined' ||
       'page.');
 }
 
+
+/****************************
+ * Initialize User Media
+ ****************************/
+// Get webcam track
+const track = await navigator.mediaDevices.getUserMedia({audio: true, video: true});
+
+// Set Media Stream 
+const videoTrack = track.getVideoTracks()[0];
+const {width, height, frameRate} = videoTrack.getSettings();
+videoInfo = {
+  width,
+  height,
+  frameRate
+}
+
 /****************************
  * Initialize mediaPipeHelper
  ****************************/
-
 const mediaPipeHelper = new MediapipeHelper();
-mediaPipeHelper.initialize({
+await mediaPipeHelper.initialize({
   mediaPipeModelConfigArray: [{modelType: "face_detection", options: {
       selfieMode: false,
       minDetectionConfidence: 0.5,
       model: 'short'
     }, 
     listener: (results) => {
-       if (results && results.detections.length !== 0) {
+      if (results && results.detections.length !== 0) {
         worker.postMessage({
           operation: "faceDetectionResult",
           result: results.detections[0].boundingBox
         })
       }
     }}]
-}).then(() => {
-  worker.postMessage({
-    operation: "init",
-    metaData: JSON.stringify({appId: '123', sourceType: 'test'}),
-    padding
-  })
+})
+
+// Initialize worker
+worker.postMessage({
+  operation: "init",
+  metaData: JSON.stringify({appId: '123', sourceType: 'test'}),
+  padding,
+  videoInfo,
+  brightnessLevel: DEFAULT_BRIGHNESS_LEVEL
 })
 
 /*********************
@@ -131,8 +150,8 @@ mediaPipeHelper.initialize({
  ********************/
 // Get sessions info from server.js
 // TODO: remove
-axios.get("/session/test", {})
-.then(result => {
+try {
+  const result = await axios.get("http://localhost:3002/session/test", {})
   if (result.status === 200) {
     apiKey = result.data ? result.data.apiKey : "";
     sessionId = result.data ? result.data.sessionId : "";
@@ -140,10 +159,10 @@ axios.get("/session/test", {})
     // connect to session
     initializeSession();
   }
-})
-.catch(error => {
-  console.error(error);
-});
+}
+catch (error) {
+  handleError(error);
+}
 
 async function initializeSession() {
   console.log("initializeSession");
@@ -218,21 +237,6 @@ async function initializeStream() {
       return;
     }
 
-    // Get webcam track
-    const track = await navigator.mediaDevices.getUserMedia({
-        video: {
-          frameRate: 30
-        }
-    });
-
-    // Set Media Stream 
-    const videoTrack = track.getVideoTracks()[0];
-    const {width, height} = videoTrack.getSettings();
-    videoDimension = {
-      width,
-      height
-    }
-
     // set initial width and height padding
     widthPaddingInput.value = Math.floor(padding.width/(width/2)*100);
     widthPaddingInput.disabled = false;
@@ -267,21 +271,12 @@ function publishStream() {
 
   // Create a publisher
   let publisher = OT.initPublisher('croppedVideo', {
-       insertMode: 'append',
-      videoSource: videoTracks[0]
+      insertMode: 'append',
+      videoSource: videoTracks[0],
    }, handleError);
   session.publish(publisher, handleError);
   console.log("Published")
   loader.classList.remove('is-loading');
-}
-
-/*********************
- * Brightness
- ********************/
-function updateBrightnessInput(brightnessLevel) {
-  brightnessLevelInput.value = brightnessLevel / 2;
-  initialBrightnessLevel = brightnessLevel;
-  initialBrightnessInput = brightnessLevel / 2;
 }
 
 /*********************
@@ -315,8 +310,9 @@ worker.addEventListener('message', ((msg) => {
       }
     } else if (inputData.callbackType === 'publish') {
       publishStream();
-    } else if (inputData.callbackType === 'brightness') {
-      updateBrightnessInput(inputData.brightnessLevel)
+    }
+    else if (inputData.callbackType === 'brightness') {
+      brightnessLevelInput.value = inputData.brightnessLevel;
     }
   }
 }))
@@ -327,6 +323,7 @@ autoZoomButton.addEventListener("click", () => {
   if (autoZoomButton.classList.contains('enable')) {
     autoZoomButton.classList.remove('enable');
     fixedRatioSection.classList.remove('is-shown');
+    faceTrackingSection.classList.remove('is-shown');
     widthPaddingSection.classList.remove('is-shown');
     heightPaddingSection.classList.remove('is-shown');
     enableAutoZoom = false;
@@ -347,33 +344,29 @@ autoZoomButton.addEventListener("click", () => {
 
 // Enable or Disable adjust brightness
 adjustBrightnessButton.addEventListener("click", () => {
-  let enableAutoBrightness = false;
+  let enableAdjustBrightness = false;
   if (adjustBrightnessButton.classList.contains('enable')) {
     adjustBrightnessButton.classList.remove('enable');
     brightnessLevelSection.classList.remove('is-shown');
     autoBrightnessSection.classList.remove('is-shown');
   }
   else {
+    enableAdjustBrightness = true;
     adjustBrightnessButton.classList.add('enable');
     autoBrightnessSection.classList.add('is-shown');
     if (!autoBrightnessCheckbox.checked) {
       brightnessLevelSection.classList.add('is-shown')
     }
-    else {
-      enableAutoBrightness = true;
-    }
   }
   worker.postMessage({
-    operation: "updateAutoBrightnessState",
-    enableAutoBrightness
+    operation: "updateAdjustBrightnessState",
+    enableAdjustBrightness,
   })
 })
 
 // Change Brightness Level
 brightnessLevelInput.addEventListener("change", (e) => {
-  let delta = e.currentTarget.value - initialBrightnessInput;
-  let brightnessLevel = initialBrightnessLevel + delta*2;
-  brightnessLevel = Math.max(0, brightnessLevel);
+  let brightnessLevel = e.currentTarget.value
 
   worker.postMessage({
     operation: "updateBrightnessLevel",
@@ -383,7 +376,7 @@ brightnessLevelInput.addEventListener("change", (e) => {
 
 // Change Width Padding
 widthPaddingInput.addEventListener("change", (e) => {
-  padding.width = Math.floor((e.currentTarget.value/100) * (videoDimension.width/2));
+  padding.width = Math.floor((e.currentTarget.value/100) * (videoInfo.width/2));
   worker.postMessage({
     operation: "updatePadding",
     padding
@@ -392,7 +385,7 @@ widthPaddingInput.addEventListener("change", (e) => {
 
 // Change Height Padding
 heightPaddingInput.addEventListener("change", (e) => {
-  padding.height = Math.floor((e.currentTarget.value/100) * (videoDimension.height/2));
+  padding.height = Math.floor((e.currentTarget.value/100) * (videoInfo.height/2));
   worker.postMessage({
     operation: "updatePadding",
     padding
@@ -405,7 +398,7 @@ fixedRatioCheckbox.addEventListener("change", () => {
   if (fixedRatioCheckbox.checked) {
     heightPaddingLabel.innerHTML = "Padding"
     widthPaddingSection.classList.remove('is-shown');
-    fixedRatio = videoDimension.width/videoDimension.height
+    fixedRatio = videoInfo.width/videoInfo.height
   }
   else {
     heightPaddingLabel.innerHTML = "Height Padding"
@@ -417,19 +410,29 @@ fixedRatioCheckbox.addEventListener("change", () => {
   })
 })
 
+// Fix Ratio checkbox
+faceTrackingCheckbox.addEventListener("change", () => {
+  worker.postMessage({
+    operation: "updateFaceTracking",
+    faceTracking: faceTrackingCheckbox.checked
+  })
+})
+
 // Auto brightness checkbox
 autoBrightnessCheckbox.addEventListener("change", () => {
   let enableAutoBrightness = false;
   if (autoBrightnessCheckbox.checked) {
     brightnessLevelSection.classList.remove('is-shown');
     enableAutoBrightness = true;
+    brightnessLevelInput.value = DEFAULT_BRIGHNESS_LEVEL;
   }
   else {
     brightnessLevelSection.classList.add('is-shown');
   }
   worker.postMessage({
     operation: "updateAutoBrightnessState",
-    enableAutoBrightness
+    enableAutoBrightness,
+    brightnessLevel: DEFAULT_BRIGHNESS_LEVEL
   })
 })
 
