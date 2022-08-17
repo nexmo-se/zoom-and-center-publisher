@@ -1,3 +1,4 @@
+const backendUrl = import.meta.env.VITE_SERVER_URL;
 import './style.css';
 import initLayoutContainer from 'opentok-layout-js'
 import Worker from './worker?worker&inline'
@@ -151,7 +152,7 @@ worker.postMessage({
 // Get sessions info from server.js
 // TODO: remove
 try {
-  const result = await axios.get("http://localhost:3002/session/test", {})
+  const result = await axios.get(backendUrl + "/session", {})
   if (result.status === 200) {
     apiKey = result.data ? result.data.apiKey : "";
     sessionId = result.data ? result.data.sessionId : "";

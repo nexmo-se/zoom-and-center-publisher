@@ -1,46 +1,54 @@
+const utils = require('../../utils');
 const path = require('path')
 require("dotenv").config({path: path.resolve(__dirname, '../.env')});
-
-const API_KEY = process.env.API_KEY;
-const API_SECRET = process.env.API_SECRET;
-
 const express = require('express');
 const cors = require('cors');
 
 const bodyParser = require('body-parser');
 const app = express(); // create express app
 require('dotenv').config();
-app.use(express.static(path.join(__dirname, '../dist'))); // TODO
+app.use(express.static(path.join(__dirname, '../dist')));
 app.use(cors());
-
-const OpenTok = require("opentok");
-const opentok = new OpenTok(API_KEY, API_SECRET);
 app.use(bodyParser.json());
 
-const sessions = {};
+
+const OpenTok = require("opentok");
+let sessions = {};
+let opentok = {};
+let gnids = utils.getIniStuff();
 
 app.get('/', (req, res, next) => {
-    res.sendFile(path.join(__dirname+'/index.html'));  // TODO
+    res.sendFile(path.join(__dirname, '../dist', 'index.html'));
   });
 
-app.get('/session/:room', async (req, res) => {
+app.get('/session', async (req, res) => {
   try {
-    const { room: roomName } = req.params;
-    console.log(sessions);
+    let jwt = req.body.jwt;
+    let id = getId(jwt); 
+    if (id < 0) {
+      return res.status(401).end();
+    }
+    const roomName = "zoom-room-" + id; 
+
+    console.log("rommname", roomName)
+    const result = await utils.getNexmo(id);
+    console.log("result", result)
+
+    opentok[id] = new OpenTok(result.tokbox_key, result.tokbox_secret);
     if (sessions[roomName]) {
-      const data = generateToken(sessions[roomName]);
+      const data = generateToken(id, sessions[roomName]);
       res.json({
         sessionId: sessions[roomName],
         token: data.token,
-        apiKey: API_KEY,
+        apiKey: result.tokbox_key,
       });
     } else {
-      const data = await getCredentials();
+      const data = await getCredentials(id);
       sessions[roomName] = data.sessionId;
       res.json({
         sessionId: data.sessionId,
         token: data.token,
-        apiKey: API_KEY,
+        apiKey: result.tokbox_key,
       });
     }
   } catch (error) {
@@ -49,28 +57,37 @@ app.get('/session/:room', async (req, res) => {
   }
 });
 
+const getId = (jwt) => {
+  let id = utils.getIdFromJWT(gnids, jwt);
+  // let id = parseJwt(jwt);
+  if (id <= 0) {
+    return -1;
+  }
+  return id;
+}
 
-const createSessionandToken = () => {
+
+const createSessionandToken = (id) => {
     return new Promise((resolve, reject) => {
-      opentok.createSession({ mediaMode: 'routed' }, function (error, session) {
+      opentok[id].createSession({ mediaMode: 'routed' }, function (error, session) {
         if (error) {
           reject(error);
         } else {
           const sessionId = session.sessionId;
-          const token = opentok.generateToken(sessionId);
+          const token = opentok[id].generateToken(sessionId);
           resolve({ sessionId: sessionId, token: token });
         }
       });
     });
   };
   
-  const generateToken = (sessionId) => {
-    const token = opentok.generateToken(sessionId);
+  const generateToken = (id, sessionId) => {
+    const token = opentok[id].generateToken(sessionId);
     return { token: token };
   };
   
-  const getCredentials = async (session = null) => {
-    const data = await createSessionandToken(session);
+  const getCredentials = async (id, session = null) => {
+    const data = await createSessionandToken(id, session);
     const sessionId = data.sessionId;
     const token = data.token;
     return { sessionId: sessionId, token: token };

@@ -32,3 +32,14 @@ This section is for manual deployment.
 The local deployment has been done. You can use various technology such as `ngrok` or `nginx` to make it public. Furthermore, for this demo to run smoothly in public, you need `https` or `SSL`. 
 
 `ngrok` will automatically grant you `SSL` certificate. However, if `nginx` was choose as public deployment, you can use `Let's Encrypt` to get your free `SSL` certificate.
+
+## For Development
+1. Go to server/server.js
+2. Change utils module path:
+    ```javascript
+    const utils = require('../utils')
+    ```
+3. Fill in "id" and "data" variables in utils.js
+4. Rename `.env.example` to `.env` and fill in the environment variable.
+5. Run command: npm run build
+6. Run command: npm run start

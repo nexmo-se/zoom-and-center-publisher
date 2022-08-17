@@ -1,11 +1,16 @@
 const path = require('path')
-const { defineConfig } = require('vite')
+const { defineConfig, loadEnv } = require('vite')
+const env = loadEnv('../', process.cwd(), '')
 
-module.exports = defineConfig({
+module.exports = defineConfig(() => {
+
+  let config = {
   root: path.join(__dirname, "./"),
-  publicDir: path.join(__dirname, "public"),
   build: {
     outDir: path.join(__dirname, "dist"),
     emptyOutDir: true
-  }
+  }}
+  if (env.ENV === "production") config["base"] =  "/zoom-and-center-publisher/"
+
+  return config;
 })
