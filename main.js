@@ -67,6 +67,7 @@ let padding = {
 const worker = new Worker();
 
 // jwt
+const queryParams = new URLSearchParams(window.location.search)
 const jwt = queryParams.get("ref")
 
 // Dom elements
