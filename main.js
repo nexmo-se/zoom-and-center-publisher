@@ -66,6 +66,9 @@ let padding = {
 // worker
 const worker = new Worker();
 
+// jwt
+const jwt = queryParams.get("ref")
+
 // Dom elements
 const croppedVideo = document.getElementById('croppedVideo')
 const autoZoomButton = document.getElementById('autoZoomButton');
@@ -152,7 +155,7 @@ worker.postMessage({
 // Get sessions info from server.js
 // TODO: remove
 try {
-  const result = await axios.get(backendUrl + "/session", {})
+  const result = await axios.post(backendUrl + "/session", {jwt: jwt})
   if (result.status === 200) {
     apiKey = result.data ? result.data.apiKey : "";
     sessionId = result.data ? result.data.sessionId : "";

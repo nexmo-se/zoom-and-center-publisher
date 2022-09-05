@@ -1,4 +1,4 @@
-const utils = require('../../utils');
+const utils = require('../../../utils');
 const path = require('path')
 require("dotenv").config({path: path.resolve(__dirname, '../.env')});
 const express = require('express');
@@ -21,7 +21,7 @@ app.get('/', (req, res, next) => {
     res.sendFile(path.join(__dirname, '../dist', 'index.html'));
   });
 
-app.get('/session', async (req, res) => {
+app.post('/session', async (req, res) => {
   try {
     let jwt = req.body.jwt;
     let id = getId(jwt); 
