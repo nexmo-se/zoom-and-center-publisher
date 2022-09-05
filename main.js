@@ -336,6 +336,7 @@ autoZoomButton.addEventListener("click", () => {
   else {
     autoZoomButton.classList.add('enable');
     fixedRatioSection.classList.add('is-shown');
+    faceTrackingSection.classList.add('is-shown');
     heightPaddingSection.classList.add('is-shown');
     if (!fixedRatioCheckbox.checked) {
       widthPaddingSection.classList.add('is-shown');
