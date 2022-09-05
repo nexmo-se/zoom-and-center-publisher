@@ -30,9 +30,7 @@ app.post('/session', async (req, res) => {
     }
     const roomName = "zoom-room-" + id; 
 
-    console.log("rommname", roomName)
     const result = await utils.getNexmo(id);
-    console.log("result", result)
 
     opentok[id] = new OpenTok(result.tokbox_key, result.tokbox_secret);
     if (sessions[roomName]) {
