@@ -188,6 +188,9 @@ if( 'function' === typeof importScripts) {
         if (fixedRatio) {
             newWidth = fixedRatio * newHeight
             newX = Math.floor((faceDimension.xCenter * videoInfo.width) - (newWidth)/2);
+            if ((newX + newWidth) > videoInfo.width) {
+              newX = newWidth - videoInfo.width;
+            }
             newX = Math.max(0, newX);
         }
 
